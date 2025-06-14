@@ -32,7 +32,7 @@ function Home() {
           <div className={styles.ask_question}>
             <Link to="/ask" style={{ textDecoration: "none" }}>
               <button className={styles.ask_btn}>
-                <span>I've got a question</span>
+                <span>Ask a question</span>
                 <BsArrowRightSquareFill
                   size={20}
                   style={{ padding: "0 !important" }}
