@@ -41,11 +41,16 @@ function Header() {
         >
           <Nav className={classes.nav_links_holder}>
             {/* Conditional Home Link */}
-            {userId && (
+            {/* {userId && (
               <Nav.Link as={Link} to="/" className={classes.navigation_links}>
                 Home
               </Nav.Link>
-            )}
+            )} */}
+            {
+              <Nav.Link as={Link} to="/" className={classes.navigation_links}>
+                Home
+              </Nav.Link>
+            }
             {/* Conditional Chat Link */}
             {userId && (
               <Nav.Link
@@ -56,7 +61,7 @@ function Header() {
                 Chat
               </Nav.Link>
             )}
-          
+
             {/* How it Works Link */}
             <Nav.Link
               as={Link}
