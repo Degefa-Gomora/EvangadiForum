@@ -546,6 +546,15 @@ async function updateUserProfile(req, res) {
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
       .json({ Msg: "Internal server error while updating profile." });
   }
+  // Strong password regex
+  const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W]).{8,12}$/;
+
+  if (!strongPasswordRegex.test(password)) {
+    return res.status(StatusCodes.BAD_REQUEST).json({
+      Msg: "Password must be at least 8 characters long and include at least one uppercase letter, one lowercase letter, one number, maximum length 12 character and one special character.",
+    });
+  }
 }
 
 async function getAllUsers(req, res) {
@@ -577,3 +586,6 @@ module.exports = {
   updateUserProfile,
   getAllUsers,
 };
+
+
+

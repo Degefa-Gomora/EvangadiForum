@@ -56,6 +56,7 @@ function Header() {
                 Chat
               </Nav.Link>
             )}
+          
             {/* How it Works Link */}
             <Nav.Link
               as={Link}
