@@ -24,7 +24,7 @@ import {
 import classes from "./UserProfile.module.css"; // Ensure this path is correct
 
 function UserProfile() {
-  const { userid } = useParams();
+  const { user_id } = useParams();
 
   const [userData, setUserData] = useState(null);
 
@@ -42,7 +42,7 @@ function UserProfile() {
 
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  console.log("UserID from URL params:", userid);
+  console.log("user_id from URL params:", user_id);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -65,7 +65,7 @@ function UserProfile() {
       }
 
       try {
-        const requestUrl = `http://localhost:5000/api/v1/user/${userid}`;
+        const requestUrl = `http://localhost:5000/api/v1/user/${user_id}`;
 
         console.log("Attempting to fetch from URL:", requestUrl);
 
@@ -141,7 +141,7 @@ function UserProfile() {
       }
     };
 
-    if (userid) {
+    if (user_id) {
       fetchUserData();
     } else {
       setError("No user ID provided in the URL.");
@@ -156,7 +156,7 @@ function UserProfile() {
         confirmButtonColor: "var(--yellow-warning)",
       });
     }
-  }, [userid]);
+  }, [user_id]);
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -259,7 +259,7 @@ function UserProfile() {
 
     try {
       const response = await axios.put(
-        `http://localhost:5000/api/v1/user/${userid}`,
+        `http://localhost:5000/api/v1/user/${user_id}`,
 
         updatedData,
 

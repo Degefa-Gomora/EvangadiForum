@@ -6,7 +6,7 @@ const PublicRoute = ({ children }) => {
   const { user } = useContext(UserState);
 
   // If logged in, redirect to home
-  if (user?.userid) {
+  if (user?.user_id) {
     return <Navigate to="/" replace />;
   }
 

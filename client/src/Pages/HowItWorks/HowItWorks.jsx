@@ -1,4 +1,4 @@
-import  { useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
 import styles from "./HowItWorks.module.css";
 import Layout from "../../Layout/Layout.jsx";
@@ -6,7 +6,7 @@ import { UserState } from "../../App.jsx";
 
 const HowItWorks = () => {
   const { user } = useContext(UserState);
-  const userId = user?.userid;
+  const user_id = user?.user_id;
 
   return (
     <Layout>
@@ -56,7 +56,7 @@ const HowItWorks = () => {
           </div>
 
           <div className="parentContainer">
-            {userId ? (
+            {user_id ? (
               <>{null}</>
             ) : (
               <div className={styles.buttonContainer}>

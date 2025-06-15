@@ -17,7 +17,7 @@ export const useAuth = () => {
 
 // Auth Provider Component
 export const AuthProvider = ({ children }) => {
-  // user state will hold the authenticated user's data (e.g., { userid, username, email, avatar_url })
+  // user state will hold the authenticated user's data (e.g., { user_id, username, email, avatar_url })
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true); // To indicate if auth state is being loaded
   const [authReady, setAuthReady] = useState(false); // New state to indicate when auth check is complete

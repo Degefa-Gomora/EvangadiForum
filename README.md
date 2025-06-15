@@ -165,7 +165,7 @@ const [selectedFile, setSelectedFile] = useState(null); // State for general fil
 const fileInputRef = useRef(null); // Ref for the hidden file input (for images and general files)
 
 const [chatMode, setChatMode] = useState("public"); // 'public' or 'private'
-const [currentDmRecipient, setCurrentDmRecipient] = useState(null); // {userId, username}
+const [currentDmRecipient, setCurrentDmRecipient] = useState(null); // {user_id, username}
 const [editingMessageId, setEditingMessageId] = useState(null); // ID of the message being edited
 const [editingMessageText, setEditingMessageText] = useState(""); // Text of the message being edited
 
@@ -191,24 +191,24 @@ setSocket(newSocket);
         newSocket.emit("join_room", PUBLIC_CHAT_ROOM_ID);
         newSocket.emit("fetch_chat_history", {
           roomId: PUBLIC_CHAT_ROOM_ID,
-          userId: user?.userid,
+          user_id: user?.user_id,
         });
       } else if (chatMode === "private" && currentDmRecipient) {
         // For private chats, the 'room' can be based on the sorted user IDs
-        const dmRoomId = [user.userid, currentDmRecipient.userId]
+        const dmRoomId = [user.user_id, currentDmRecipient.user_id]
           .sort()
           .join("-");
         newSocket.emit("join_room", dmRoomId);
         newSocket.emit("fetch_chat_history", {
           roomId: dmRoomId,
-          userId: user?.userid,
-          targetUserId: currentDmRecipient.userId,
+          user_id: user?.user_id,
+          targetuser_id: currentDmRecipient.user_id,
         });
       }
 
-      if (user?.userid && user?.username) {
+      if (user?.user_id && user?.username) {
         newSocket.emit("user_online", {
-          userId: user.userid,
+          user_id: user.user_id,
           username: user.username,
           avatar_url: user.avatar_url,
         });
@@ -226,10 +226,10 @@ setSocket(newSocket);
         message.message_type === "private" &&
         chatMode === "private" &&
         currentDmRecipient &&
-        ((message.user_id === user?.userid &&
-          message.recipient_id === currentDmRecipient.userId) ||
-          (message.user_id === currentDmRecipient.userId &&
-            message.recipient_id === user?.userid));
+        ((message.user_id === user?.user_id &&
+          message.recipient_id === currentDmRecipient.user_id) ||
+          (message.user_id === currentDmRecipient.user_id &&
+            message.recipient_id === user?.user_id));
 
       if (isForCurrentPublicChat || isForCurrentPrivateChat) {
         setMessages((prev) => [...prev, message]);
@@ -261,7 +261,7 @@ setSocket(newSocket);
     });
 
     newSocket.on("typing", (data) => {
-      if (data.userId !== user?.userid) {
+      if (data.user_id !== user?.user_id) {
         setIsTyping(true);
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
@@ -271,7 +271,7 @@ setSocket(newSocket);
     });
 
     newSocket.on("stop_typing", (data) => {
-      if (data.userId !== user?.userid) {
+      if (data.user_id !== user?.user_id) {
         clearTimeout(typingTimeoutRef.current);
         setIsTyping(false);
       }
@@ -280,8 +280,8 @@ setSocket(newSocket);
     newSocket.on("disconnect", () => {
       console.log("Disconnected from Socket.IO server.");
       setSocket(null);
-      if (user?.userid) {
-        newSocket.emit("user_offline", { userId: user.userid });
+      if (user?.user_id) {
+        newSocket.emit("user_offline", { user_id: user.user_id });
       }
     });
 
@@ -370,20 +370,20 @@ setInput(e.target.value);
 if (socket) {
 if (e.target.value.trim().length > 0) {
 socket.emit("typing", {
-userId: user?.userid,
+user_id: user?.user_id,
 username: user?.username,
 roomId:
 chatMode === "public"
 ? PUBLIC_CHAT_ROOM_ID
-: [user.userid, currentDmRecipient.userId].sort().join("-"),
+: [user.user_id, currentDmRecipient.user_id].sort().join("-"),
 });
 } else {
 socket.emit("stop_typing", {
-userId: user?.userid,
+user_id: user?.user_id,
 roomId:
 chatMode === "public"
 ? PUBLIC_CHAT_ROOM_ID
-: [user.userid, currentDmRecipient.userId].sort().join("-"),
+: [user.user_id, currentDmRecipient.user_id].sort().join("-"),
 });
 }
 }
@@ -391,11 +391,11 @@ clearTimeout(typingTimeoutRef.current);
 typingTimeoutRef.current = setTimeout(() => {
 if (socket)
 socket.emit("stop_typing", {
-userId: user?.userid,
+user_id: user?.user_id,
 roomId:
 chatMode === "public"
 ? PUBLIC_CHAT_ROOM_ID
-: [user.userid, currentDmRecipient.userId].sort().join("-"),
+: [user.user_id, currentDmRecipient.user_id].sort().join("-"),
 });
 }, 1000);
 };
@@ -413,13 +413,13 @@ const messageText = input.trim();
       const messagePayload = {
         roomId: PUBLIC_CHAT_ROOM_ID, // Default for public messages, but will be overwritten for private
         text: messageText,
-        userId: user?.userid || null,
+        user_id: user?.user_id || null,
         username: user?.username || "Anonymous",
         avatar_url: user?.avatar_url || null,
         message_type: chatMode, // 'public' or 'private'
         recipient_id:
           chatMode === "private" && currentDmRecipient
-            ? currentDmRecipient.userId
+            ? currentDmRecipient.user_id
             : null,
         reactions: [],
         file_data: selectedFile ? selectedFile.data : selectedImage, // Use file_data for any file
@@ -444,11 +444,11 @@ const messageText = input.trim();
       setShowInputEmojiPicker(false);
       clearTimeout(typingTimeoutRef.current);
       socket.emit("stop_typing", {
-        userId: user?.userid,
+        user_id: user?.user_id,
         roomId:
           chatMode === "public"
             ? PUBLIC_CHAT_ROOM_ID
-            : [user.userid, currentDmRecipient.userId].sort().join("-"),
+            : [user.user_id, currentDmRecipient.user_id].sort().join("-"),
       });
     }
 
@@ -460,7 +460,7 @@ setShowInputEmojiPicker(false); // Close after selection
 };
 
 const handleReaction = (messageId, emoji) => {
-if (!user?.userid) {
+if (!user?.user_id) {
 Swal.fire({
 icon: "warning",
 title: "Login Required",
@@ -479,7 +479,7 @@ return;
 
     socket.emit("react_message", {
       messageId,
-      userId: user.userid,
+      user_id: user.user_id,
       username: user.username,
       emoji: emoji,
     });
@@ -588,7 +588,7 @@ if (editingMessageId && editingMessageText.trim() && socket) {
 socket.emit("edit_message", {
 messageId: editingMessageId,
 newText: editingMessageText.trim(),
-userId: user?.userid,
+user_id: user?.user_id,
 });
 setEditingMessageId(null); // Clear editing state
 setEditingMessageText("");
@@ -613,7 +613,7 @@ setSelectedFile(null);
 
 // Function to delete a message
 const handleDeleteMessage = async (messageId) => {
-if (!user?.userid) {
+if (!user?.user_id) {
 Swal.fire({
 icon: "warning",
 title: "Login Required",
@@ -643,7 +643,7 @@ return;
     if (result.isConfirmed) {
       socket.emit("delete_message", {
         messageId,
-        userId: user.userid,
+        user_id: user.user_id,
       });
     }
 
@@ -651,7 +651,7 @@ return;
 
 // Function to switch chat mode (Public/Private)
 const switchChatMode = (mode, recipient = null) => {
-if (!user?.userid && mode === "private") {
+if (!user?.user_id && mode === "private") {
 Swal.fire({
 icon: "warning",
 title: "Login Required",
@@ -676,6 +676,7 @@ setSocket(null); // Force useEffect to re-initialize
 };
 
 return (
+
 <div className={styles.publicChatContainer}>
 <header className={styles.chatHeader}>
 <h2 className={styles.chatTitle}>
@@ -697,7 +698,7 @@ className={`${styles.chatModeButton} ${
               chatMode === "private" ? styles.activeMode : ""
             }`}
 onClick={() => switchChatMode("private", currentDmRecipient)} // Allow switching to private (retains current recipient if exists)
-disabled={!user?.userid}
+disabled={!user?.user_id}
 title="Switch to Private Chat" >
 <FiMessageCircle className={styles.chatModeIcon} /> Private
 </button>
@@ -720,10 +721,10 @@ title="Switch to Private Chat" >
         <strong>Online: </strong>
         {onlineUsers.length > 0 ? (
           onlineUsers.map((u) => (
-            <span key={u.userId} className={styles.onlineUserTag}>
+            <span key={u.user_id} className={styles.onlineUserTag}>
               <span className={styles.onlineIndicator}></span>
               {u.username}
-              {u.userId !== user?.userid && ( // Don't allow DMing self
+              {u.user_id !== user?.user_id && ( // Don't allow DMing self
                 <button
                   className={styles.dmButton}
                   onClick={() => switchChatMode("private", u)}
@@ -759,7 +760,7 @@ title="Switch to Private Chat" >
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isMyMessage = msg.user_id === user?.userid;
+            const isMyMessage = msg.user_id === user?.user_id;
             const isFileMessage = msg.file_data && msg.file_name;
             const isImage =
               isFileMessage &&
@@ -932,7 +933,7 @@ title="Switch to Private Chat" >
                         <span
                           key={reaction.emoji}
                           className={`${styles.reactionBubble} ${
-                            reaction.userIds.includes(user?.userid)
+                            reaction.user_ids.includes(user?.user_id)
                               ? styles.userReacted
                               : ""
                           }`}
@@ -943,7 +944,7 @@ title="Switch to Private Chat" >
                         >
                           <span className={styles.emoji}>{reaction.emoji}</span>
                           <span className={styles.count}>
-                            {reaction.userIds.length}
+                            {reaction.user_ids.length}
                           </span>
                         </span>
                       ))}

@@ -44,16 +44,16 @@ async function authMiddleware(req, res, next) {
     console.log("AuthMiddleware: Successfully decoded JWT payload:", decoded); // Log the full decoded payload
 
     let extractedUsername = decoded.username;
-    let extractedUserid = decoded.userid || decoded.id;
+    let extracteduser_id = decoded.user_id || decoded.id;
     if (decoded.user && typeof decoded.user === "object") {
       extractedUsername = decoded.user.username || extractedUsername;
-      extractedUserid =
-        decoded.user.userid || decoded.user.id || extractedUserid;
+      extracteduser_id =
+        decoded.user.user_id || decoded.user.id || extracteduser_id;
     }
 
-    if (!extractedUsername || !extractedUserid) {
+    if (!extractedUsername || !extracteduser_id) {
       console.error(
-        "AuthMiddleware: Missing username or userid after decoding token. Decoded:",
+        "AuthMiddleware: Missing username or user_id after decoding token. Decoded:",
         decoded
       );
       return res.status(StatusCodes.UNAUTHORIZED).json({
@@ -62,7 +62,7 @@ async function authMiddleware(req, res, next) {
     }
 
     // Attach user info to the request object
-    req.user = { username: extractedUsername, userid: extractedUserid };
+    req.user = { username: extractedUsername, user_id: extracteduser_id };
     // If avatar_url is consistently included in the token payload, extract and attach it here too.
     if (decoded.avatar_url) {
       // Check if avatar_url exists directly in decoded payload

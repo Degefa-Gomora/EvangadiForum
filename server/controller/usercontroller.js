@@ -112,7 +112,7 @@ async function register(req, res) {
   try {
     // Check if username or email already exists
     const [existingUsers] = await dbConnection.query(
-      "SELECT userid FROM users WHERE username = ? OR email = ?",
+      "SELECT user_id FROM users WHERE username = ? OR email = ?",
       [username, email]
     );
 
@@ -168,7 +168,7 @@ async function verifyEmail(req, res) {
 
   try {
     const [users] = await dbConnection.query(
-      "SELECT userid, is_verified, token_expires_at, email FROM users WHERE verification_token = ?",
+      "SELECT user_id, is_verified, token_expires_at, email FROM users WHERE verification_token = ?",
       [token]
     );
     console.log(
@@ -191,7 +191,10 @@ async function verifyEmail(req, res) {
     console.log("VerifyEmail: Found user:", user);
 
     if (user.is_verified) {
-      console.log("VerifyEmail: Email already verified for user:", user.userid);
+      console.log(
+        "VerifyEmail: Email already verified for user:",
+        user.user_id
+      );
       // If already verified, still return success, as the action is effectively complete
       return res
         .status(StatusCodes.OK)
@@ -220,8 +223,8 @@ async function verifyEmail(req, res) {
 
     // If all checks pass, then update the user's status
     const [updateResult] = await dbConnection.query(
-      "UPDATE users SET is_verified = ?, verification_token = NULL, token_expires_at = NULL WHERE userid = ?",
-      [true, user.userid]
+      "UPDATE users SET is_verified = ?, verification_token = NULL, token_expires_at = NULL WHERE user_id = ?",
+      [true, user.user_id]
     );
 
     if (updateResult.affectedRows === 0) {
@@ -235,7 +238,7 @@ async function verifyEmail(req, res) {
 
     console.log(
       "VerifyEmail: User successfully verified and token cleared for user:",
-      user.userid
+      user.user_id
     );
     console.log("VerifyEmail: Sending success response to frontend.");
     res
@@ -261,7 +264,7 @@ async function login(req, res) {
 
   try {
     const [users] = await dbConnection.query(
-      "SELECT userid, username, email, password, is_verified, avatar_url FROM users WHERE email = ? OR username = ?",
+      "SELECT user_id, username, email, password, is_verified, avatar_url FROM users WHERE email = ? OR username = ?",
       [usernameOrEmail, usernameOrEmail]
     );
 
@@ -290,7 +293,7 @@ async function login(req, res) {
 
     const token = jwt.sign(
       {
-        userid: user.userid,
+        user_id: user.user_id,
         username: user.username,
         email: user.email,
         avatar_url: user.avatar_url,
@@ -303,7 +306,7 @@ async function login(req, res) {
       Msg: "Logged in successfully!",
       token: token,
       user: {
-        userid: user.userid,
+        user_id: user.user_id,
         username: user.username,
         email: user.email,
         avatar_url: user.avatar_url,
@@ -327,7 +330,7 @@ async function forgotPassword(req, res) {
 
   try {
     const [users] = await dbConnection.query(
-      "SELECT userid FROM users WHERE email = ?",
+      "SELECT user_id FROM users WHERE email = ?",
       [email]
     );
 
@@ -344,8 +347,8 @@ async function forgotPassword(req, res) {
     const resetTokenExpires = new Date(Date.now() + 3600000); // 1 hour (3600000 ms)
 
     await dbConnection.query(
-      "UPDATE users SET reset_password_token = ?, reset_password_expires = ? WHERE userid = ?",
-      [resetToken, resetTokenExpires, user.userid]
+      "UPDATE users SET reset_password_token = ?, reset_password_expires = ? WHERE user_id = ?",
+      [resetToken, resetTokenExpires, user.user_id]
     );
 
     const resetLink = `${process.env.BASE_URL}/reset-password/${resetToken}`;
@@ -381,7 +384,7 @@ async function resetPassword(req, res) {
 
   try {
     const [users] = await dbConnection.query(
-      "SELECT userid, reset_password_expires FROM users WHERE reset_password_token = ?",
+      "SELECT user_id, reset_password_expires FROM users WHERE reset_password_token = ?",
       [token]
     );
 
@@ -406,8 +409,8 @@ async function resetPassword(req, res) {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await dbConnection.query(
-      "UPDATE users SET password = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE userid = ?",
-      [hashedPassword, user.userid]
+      "UPDATE users SET password = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE user_id = ?",
+      [hashedPassword, user.user_id]
     );
 
     res.status(StatusCodes.OK).json({ Msg: "Password reset successful." });
@@ -421,22 +424,22 @@ async function resetPassword(req, res) {
 
 async function check(req, res) {
   const username = req.user.username;
-  const userid = req.user.userid;
+  const user_id = req.user.user_id;
   const avatar_url = req.user.avatar_url; // Ensure avatar_url is part of your JWT payload
 
   return res
     .status(StatusCodes.OK)
-    .json({ user: { username, userid, avatar_url } });
+    .json({ user: { username, user_id, avatar_url } });
 }
 
 async function getUserProfileById(req, res) {
-  const { userid } = req.params;
+  const { user_id } = req.params;
 
   try {
     // Select 'firstname' and 'lastname' to match your database schema
     const [user] = await dbConnection.query(
-      "SELECT userid, username, firstname, lastname, email, avatar_url, createdAt, is_verified FROM users WHERE userid = ?",
-      [userid]
+      "SELECT user_id, username, firstname, lastname, email, avatar_url, createdAt, is_verified FROM users WHERE user_id = ?",
+      [user_id]
     );
 
     if (user.length === 0) {
@@ -466,8 +469,8 @@ async function getUserProfileById(req, res) {
 }
 
 async function updateUserProfile(req, res) {
-  const { userid } = req.params;
-  const authenticatedUserId = req.user?.userid; // Assuming req.user is populated by authMiddleware
+  const { user_id } = req.params;
+  const authenticateduser_id = req.user?.user_id; // Assuming req.user is populated by authMiddleware
 
   const { fullname, username, email, password, avatar_url } = req.body;
 
@@ -492,7 +495,7 @@ async function updateUserProfile(req, res) {
     });
   }
 
-  if (authenticatedUserId && parseInt(userid) !== authenticatedUserId) {
+  if (authenticateduser_id && parseInt(user_id) !== authenticateduser_id) {
     return res.status(StatusCodes.FORBIDDEN).json({
       Msg: "You are not authorized to update this user's profile.",
     });
@@ -521,8 +524,8 @@ async function updateUserProfile(req, res) {
       queryParams.push(hashedPassword);
     }
 
-    updateQuery += ` WHERE userid = ?`;
-    queryParams.push(userid);
+    updateQuery += ` WHERE user_id = ?`;
+    queryParams.push(user_id);
 
     const [result] = await dbConnection.query(updateQuery, queryParams);
 
@@ -563,7 +566,7 @@ async function getAllUsers(req, res) {
   try {
     // Selecting all relevant user data, including is_verified status
     const [users] = await dbConnection.query(
-      "SELECT userid, username, email, firstname, lastname, avatar_url, is_verified, createdAt FROM users ORDER BY username ASC"
+      "SELECT user_id, username, email, firstname, lastname, avatar_url, is_verified, createdAt FROM users ORDER BY username ASC"
     );
     res.status(StatusCodes.OK).json({ users });
   } catch (error) {
@@ -586,6 +589,3 @@ module.exports = {
   updateUserProfile,
   getAllUsers,
 };
-
-
-

@@ -37,7 +37,7 @@
 //   const messageBubbleRef = useRef(null); // Ref to the message bubble for positioning reaction menu
 
 //   // Determine if the message belongs to the current logged-in user
-//   const isMyMessage = message.user_id === user?.userid;
+//   const isMyMessage = message.user_id === user?.user_id;
 
 //   // Determine if the message contains a file (image or other)
 //   const isFileMessage = message.file_data && message.file_name;
@@ -332,7 +332,7 @@
 //               <span
 //                 key={index}
 //                 className={`${styles.reactionBubble} ${
-//                   reaction.userIds.includes(user?.userid)
+//                   reaction.user_ids.includes(user?.user_id)
 //                     ? styles.userReacted
 //                     : ""
 //                 }`}
@@ -340,7 +340,7 @@
 //                 title={`Reacted by: ${reaction.usernames.join(", ")}`}
 //               >
 //                 <span className={styles.emoji}>{reaction.emoji}</span>{" "}
-//                 <span className={styles.count}>{reaction.userIds.length}</span>
+//                 <span className={styles.count}>{reaction.user_ids.length}</span>
 //               </span>
 //             ))}
 //           </div>

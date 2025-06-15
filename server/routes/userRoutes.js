@@ -35,10 +35,10 @@ router.get("/verify-email/:token", verifyEmail);
 router.get("/check", authMiddleware, check);
 
 // Get user profile by user ID (public or protected)
-router.get("/:userid", getUserProfileById);
+router.get("/:user_id", getUserProfileById);
 
 // Update user profile by user ID (protected)
-router.put("/:userid", authMiddleware, updateUserProfile);
+router.put("/:user_id", authMiddleware, updateUserProfile);
 
 // Get all users (protected)
 router.get("/", authMiddleware, getAllUsers);

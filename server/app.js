@@ -15,12 +15,12 @@ app.get("/", (req, res) => {
 
 // Login simulation route to issue JWT token (for testing)
 app.post("/login", (req, res) => {
-  const { username, userid } = req.body;
-  if (!username || !userid) {
-    return res.status(400).json({ msg: "username and userid required" });
+  const { username, user_id } = req.body;
+  if (!username || !user_id) {
+    return res.status(400).json({ msg: "username and user_id required" });
   }
 
-  const token = jwt.sign({ username, userid }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ username, user_id }, process.env.JWT_SECRET, {
     expiresIn: "1d",
   });
   res.json({ token });
@@ -55,7 +55,7 @@ app.use(express.json());
 
 // ==============================================
 // In-memory store for currently active users (based on connection AND activity)
-const activeUsers = {}; // { userId: { userId, username, avatar_url, sid, lastActivity, currentRoomId } }
+const activeUsers = {}; // { user_id: { user_id, username, avatar_url, sid, lastActivity, currentRoomId } }
 const ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
 let lastKnownActiveUsersCount = 0;
 
@@ -112,13 +112,13 @@ app.use("/api/v1/user", userRoutes);
 app.get("/api/check-user", authenticateToken, async (req, res) => {
   try {
     const [users] = await db.query(
-      "SELECT userid, username, email, avatar_url FROM users WHERE userid = ?",
-      [req.user.userid]
+      "SELECT user_id, username, email, avatar_url FROM users WHERE user_id = ?",
+      [req.user.user_id]
     );
 
     if (users.length === 0) {
       console.error(
-        `User with ID ${req.user.userid} not found in DB after token verification.`
+        `User with ID ${req.user.user_id} not found in DB after token verification.`
       );
       return res.status(404).json({ msg: "User not found in database." });
     }
@@ -128,7 +128,7 @@ app.get("/api/check-user", authenticateToken, async (req, res) => {
     res.status(200).json({
       message: "Token is valid",
       user: {
-        userid: authenticatedUserData.userid,
+        user_id: authenticatedUserData.user_id,
         username: authenticatedUserData.username,
         email: authenticatedUserData.email,
         avatar_url: authenticatedUserData.avatar_url,
@@ -151,15 +151,15 @@ app.use("/api/v1", answerRoutes);
 // Endpoint to fetch chat history for a room (optional, primarily for initial load)
 app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
   const { roomId } = req.params;
-  const { type, targetUserId } = req.query; // Add query params for message type and target user
-  const userId = req.user.userid; // Current authenticated user
+  const { type, targetuser_id } = req.query; // Add query params for message type and target user
+  const user_id = req.user.user_id; // Current authenticated user
 
   try {
     let query;
     let params;
 
-    if (type === "private" && targetUserId) {
-      const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
+    if (type === "private" && targetuser_id) {
+      const dmRoomId = getPrivateChatRoomId(user_id, targetuser_id);
       query = `
         SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
         FROM chat_messages
@@ -168,7 +168,7 @@ app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
       `;
       params = [dmRoomId];
     } else {
-      // Default to public if type is not private or targetUserId is missing
+      // Default to public if type is not private or targetuser_id is missing
       query = `
         SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
         FROM chat_messages
@@ -238,11 +238,11 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined room: ${roomId}`);
     // Update user's current room tracking in activeUsers if available
-    for (const userId in activeUsers) {
-      if (activeUsers[userId].sid === socket.id) {
-        activeUsers[userId].currentRoomId = roomId;
+    for (const user_id in activeUsers) {
+      if (activeUsers[user_id].sid === socket.id) {
+        activeUsers[user_id].currentRoomId = roomId;
         console.log(
-          `User ${activeUsers[userId].username} (ID: ${userId}) updated to room ${roomId}`
+          `User ${activeUsers[user_id].username} (ID: ${user_id}) updated to room ${roomId}`
         );
         break;
       }
@@ -251,7 +251,7 @@ io.on("connection", (socket) => {
     io.emit(
       "online_users",
       Object.values(activeUsers).map((u) => ({
-        userId: u.userId,
+        user_id: u.user_id,
         username: u.username,
         avatar_url: u.avatar_url,
       }))
@@ -260,13 +260,13 @@ io.on("connection", (socket) => {
 
   // Emitted by frontend to fetch chat history (both public and private)
   socket.on("fetch_chat_history", async (data) => {
-    const { userId, targetUserId } = data; // userId is the current logged-in user's ID
+    const { user_id, targetuser_id } = data; // user_id is the current logged-in user's ID
     let query;
     let params;
 
-    if (targetUserId) {
+    if (targetuser_id) {
       // It's a private chat
-      const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
+      const dmRoomId = getPrivateChatRoomId(user_id, targetuser_id);
       query = `
         SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
         FROM chat_messages
@@ -302,8 +302,8 @@ io.on("connection", (socket) => {
       });
       socket.emit("chat_history", formattedMessages);
       console.log(
-        `Socket ${socket.id}: Sent chat history for User ${userId} (Target: ${
-          targetUserId || "public"
+        `Socket ${socket.id}: Sent chat history for User ${user_id} (Target: ${
+          targetuser_id || "public"
         })`
       );
     } catch (error) {
@@ -318,10 +318,10 @@ io.on("connection", (socket) => {
 
   // Registers a user as online and updates their activity timestamp
   socket.on("user_online", async (data) => {
-    const userId = data.userId;
-    if (userId) {
-      activeUsers[userId] = {
-        userId: userId,
+    const user_id = data.user_id;
+    if (user_id) {
+      activeUsers[user_id] = {
+        user_id: user_id,
         username: data.username || "Anonymous",
         avatar_url: data.avatar_url,
         sid: socket.id, // Store session ID to associate with disconnects
@@ -329,20 +329,20 @@ io.on("connection", (socket) => {
         currentRoomId: PUBLIC_CHAT_ROOM_ID, // Assume public lobby on initial connect
       };
       console.log(
-        `User ${activeUsers[userId].username} (ID: ${userId}) marked online/active. SID: ${socket.id}`
+        `User ${activeUsers[user_id].username} (ID: ${user_id}) marked online/active. SID: ${socket.id}`
       );
       // Broadcast the updated list of active users to all clients immediately
       io.emit(
         "online_users",
         Object.values(activeUsers).map((u) => ({
-          userId: u.userId,
+          user_id: u.user_id,
           username: u.username,
           avatar_url: u.avatar_url,
         }))
       );
     } else {
       console.warn(
-        `Socket ${socket.id}: user_online event received with missing userId.`
+        `Socket ${socket.id}: user_online event received with missing user_id.`
       );
     }
   });
@@ -351,7 +351,7 @@ io.on("connection", (socket) => {
   socket.on("chat message", async (msg) => {
     const {
       text,
-      userId,
+      user_id,
       username,
       avatar_url,
       message_type,
@@ -363,7 +363,7 @@ io.on("connection", (socket) => {
 
     let actualRoomId;
     if (message_type === "private" && recipient_id) {
-      actualRoomId = getPrivateChatRoomId(userId, recipient_id);
+      actualRoomId = getPrivateChatRoomId(user_id, recipient_id);
     } else {
       actualRoomId = PUBLIC_CHAT_ROOM_ID; // Default to public room
     }
@@ -377,7 +377,7 @@ io.on("connection", (socket) => {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `;
       const [result] = await db.query(insertQuery, [
-        userId,
+        user_id,
         username,
         text,
         actualRoomId, // Use the derived actualRoomId
@@ -392,7 +392,7 @@ io.on("connection", (socket) => {
       const messageId = result.insertId;
       const newMessage = {
         message_id: messageId,
-        user_id: userId,
+        user_id: user_id,
         username: username,
         message_text: text,
         room_id: actualRoomId, // Use the derived actualRoomId
@@ -408,11 +408,11 @@ io.on("connection", (socket) => {
       };
 
       // Update lastActivity for the user who sent the message
-      if (activeUsers[userId]) {
-        activeUsers[userId].lastActivity = Date.now();
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
       } else {
-        activeUsers[userId] = {
-          userId: userId,
+        activeUsers[user_id] = {
+          user_id: user_id,
           username: username || "Anonymous",
           avatar_url: avatar_url,
           sid: socket.id,
@@ -421,7 +421,7 @@ io.on("connection", (socket) => {
         };
       }
       console.log(
-        `User ${username} (ID: ${userId}) activity updated after sending message.`
+        `User ${username} (ID: ${user_id}) activity updated after sending message.`
       );
 
       // Emit the new message to relevant clients
@@ -443,7 +443,7 @@ io.on("connection", (socket) => {
       io.emit(
         "online_users",
         Object.values(activeUsers).map((u) => ({
-          userId: u.userId,
+          user_id: u.user_id,
           username: u.username,
           avatar_url: u.avatar_url,
         }))
@@ -456,7 +456,7 @@ io.on("connection", (socket) => {
 
   // Handle message editing
   socket.on("edit_message", async (data) => {
-    const { messageId, newText, userId, file_data, file_name, file_type } =
+    const { messageId, newText, user_id, file_data, file_name, file_type } =
       data;
     try {
       const [originalMsgRows] = await db.query(
@@ -469,7 +469,7 @@ io.on("connection", (socket) => {
       }
       const originalMessage = originalMsgRows[0];
 
-      if (originalMessage.user_id !== userId) {
+      if (originalMessage.user_id !== user_id) {
         socket.emit("error", "You are not authorized to edit this message.");
         return;
       }
@@ -512,14 +512,14 @@ io.on("connection", (socket) => {
       // Determine the room to emit to
       const roomToEmit =
         updatedMessage.message_type === "private" && updatedMessage.recipient_id
-          ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
+          ? getPrivateChatRoomId(user_id, updatedMessage.recipient_id)
           : updatedMessage.room_id; // For public, use original room_id
 
       io.to(roomToEmit).emit("message_updated", updatedMessage);
-      console.log(`Message ${messageId} edited by user ${userId}.`);
+      console.log(`Message ${messageId} edited by user ${user_id}.`);
 
-      if (activeUsers[userId]) {
-        activeUsers[userId].lastActivity = Date.now();
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
       }
     } catch (error) {
       console.error("Error editing message:", error);
@@ -529,7 +529,7 @@ io.on("connection", (socket) => {
 
   // Handle message deletion
   socket.on("delete_message", async (data) => {
-    const { messageId, userId } = data;
+    const { messageId, user_id } = data;
     try {
       const [originalMsgRows] = await db.query(
         "SELECT user_id, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
@@ -541,7 +541,7 @@ io.on("connection", (socket) => {
       }
       const originalMessage = originalMsgRows[0];
 
-      if (originalMessage.user_id !== userId) {
+      if (originalMessage.user_id !== user_id) {
         socket.emit("error", "You are not authorized to delete this message.");
         return;
       }
@@ -572,14 +572,14 @@ io.on("connection", (socket) => {
       // Determine the room to emit to
       const roomToEmit =
         updatedMessage.message_type === "private" && updatedMessage.recipient_id
-          ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
+          ? getPrivateChatRoomId(user_id, updatedMessage.recipient_id)
           : updatedMessage.room_id;
 
       io.to(roomToEmit).emit("message_updated", updatedMessage);
-      console.log(`Message ${messageId} deleted by user ${userId}.`);
+      console.log(`Message ${messageId} deleted by user ${user_id}.`);
 
-      if (activeUsers[userId]) {
-        activeUsers[userId].lastActivity = Date.now();
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
       }
     } catch (error) {
       console.error("Error deleting message:", error);
@@ -589,8 +589,8 @@ io.on("connection", (socket) => {
 
   // Handles message reactions
   socket.on("react_message", async (data) => {
-    const { messageId, userId, username, emoji } = data;
-    if (!messageId || !userId || !username || !emoji) {
+    const { messageId, user_id, username, emoji } = data;
+    if (!messageId || !user_id || !username || !emoji) {
       console.warn("Invalid reaction data:", data);
       return;
     }
@@ -620,21 +620,22 @@ io.on("connection", (socket) => {
         (r) => r.emoji === emoji
       );
       if (reactionIndex !== -1) {
-        const userIdx = currentReactions[reactionIndex].userIds.indexOf(userId);
-        if (userIdx !== -1) {
-          currentReactions[reactionIndex].userIds.splice(userIdx, 1);
-          currentReactions[reactionIndex].usernames.splice(userIdx, 1);
-          if (currentReactions[reactionIndex].userIds.length === 0) {
+        const user_idx =
+          currentReactions[reactionIndex].user_ids.indexOf(user_id);
+        if (user_idx !== -1) {
+          currentReactions[reactionIndex].user_ids.splice(user_idx, 1);
+          currentReactions[reactionIndex].usernames.splice(user_idx, 1);
+          if (currentReactions[reactionIndex].user_ids.length === 0) {
             currentReactions.splice(reactionIndex, 1);
           }
         } else {
-          currentReactions[reactionIndex].userIds.push(userId);
+          currentReactions[reactionIndex].user_ids.push(user_id);
           currentReactions[reactionIndex].usernames.push(username);
         }
       } else {
         currentReactions.push({
           emoji: emoji,
-          userIds: [userId],
+          user_ids: [user_id],
           usernames: [username],
         });
       }
@@ -651,16 +652,16 @@ io.on("connection", (socket) => {
 
       const roomToEmit =
         message.message_type === "private" && message.recipient_id
-          ? getPrivateChatRoomId(userId, message.recipient_id)
+          ? getPrivateChatRoomId(user_id, message.recipient_id)
           : message.room_id;
 
       io.to(roomToEmit).emit("message_updated", updatedMessage);
       console.log(
-        `Reaction '${emoji}' processed for message ${messageId} by user ${userId}`
+        `Reaction '${emoji}' processed for message ${messageId} by user ${user_id}`
       );
 
-      if (activeUsers[userId]) {
-        activeUsers[userId].lastActivity = Date.now();
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
       }
     } catch (error) {
       console.error("Error reacting to message:", error);
@@ -673,44 +674,44 @@ io.on("connection", (socket) => {
     // Broadcast to others in the room that someone is typing, exclude sender
     const roomToSend =
       data.message_type === "private" && data.recipient_id
-        ? getPrivateChatRoomId(data.userId, data.recipient_id)
+        ? getPrivateChatRoomId(data.user_id, data.recipient_id)
         : data.roomId || PUBLIC_CHAT_ROOM_ID;
 
     socket
       .to(roomToSend)
-      .emit("typing", { userId: data.userId, username: data.username });
-    if (activeUsers[data.userId]) {
-      activeUsers[data.userId].lastActivity = Date.now();
+      .emit("typing", { user_id: data.user_id, username: data.username });
+    if (activeUsers[data.user_id]) {
+      activeUsers[data.user_id].lastActivity = Date.now();
     }
   });
 
   socket.on("stop_typing", (data) => {
     const roomToSend =
       data.message_type === "private" && data.recipient_id
-        ? getPrivateChatRoomId(data.userId, data.recipient_id)
+        ? getPrivateChatRoomId(data.user_id, data.recipient_id)
         : data.roomId || PUBLIC_CHAT_ROOM_ID;
-    socket.to(roomToSend).emit("stop_typing", { userId: data.userId });
+    socket.to(roomToSend).emit("stop_typing", { user_id: data.user_id });
   });
 
   // Handles client disconnection
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
-    let disconnectedUserId = null;
-    for (const userId in activeUsers) {
-      if (activeUsers[userId].sid === socket.id) {
-        disconnectedUserId = userId;
+    let disconnecteduser_id = null;
+    for (const user_id in activeUsers) {
+      if (activeUsers[user_id].sid === socket.id) {
+        disconnecteduser_id = user_id;
         break;
       }
     }
-    if (disconnectedUserId) {
-      delete activeUsers[disconnectedUserId];
+    if (disconnecteduser_id) {
+      delete activeUsers[disconnecteduser_id];
       console.log(
-        `User ${disconnectedUserId} removed from active users due to disconnect.`
+        `User ${disconnecteduser_id} removed from active users due to disconnect.`
       );
       io.emit(
         "online_users",
         Object.values(activeUsers).map((u) => ({
-          userId: u.userId,
+          user_id: u.user_id,
           username: u.username,
           avatar_url: u.avatar_url,
         }))
@@ -725,12 +726,12 @@ io.on("connection", (socket) => {
 setInterval(() => {
   const fiveMinutesAgo = Date.now() - ACTIVITY_TIMEOUT_MS;
   let usersRemovedThisCycle = 0;
-  for (const userId in activeUsers) {
-    if (activeUsers[userId].lastActivity < fiveMinutesAgo) {
+  for (const user_id in activeUsers) {
+    if (activeUsers[user_id].lastActivity < fiveMinutesAgo) {
       console.log(
-        `User ${activeUsers[userId].username} (ID: ${userId}) removed due to inactivity.`
+        `User ${activeUsers[user_id].username} (ID: ${user_id}) removed due to inactivity.`
       );
-      delete activeUsers[userId];
+      delete activeUsers[user_id];
       usersRemovedThisCycle++;
     }
   }
@@ -746,7 +747,7 @@ setInterval(() => {
     io.emit(
       "online_users",
       Object.values(activeUsers).map((u) => ({
-        userId: u.userId,
+        user_id: u.user_id,
         username: u.username,
         avatar_url: u.avatar_url,
       }))

@@ -61,7 +61,7 @@ const PublicChat = () => {
   const [modalImageName, setModalImageName] = useState(null);
 
   const [chatMode, setChatMode] = useState("public"); // 'public' or 'private'
-  const [currentDmRecipient, setCurrentDmRecipient] = useState(null); // {userId, username, avatar_url}
+  const [currentDmRecipient, setCurrentDmRecipient] = useState(null); // {user_id, username, avatar_url}
 
   // Message editing states
   const [editingMessageId, setEditingMessageId] = useState(null); // ID of the message being edited
@@ -87,18 +87,18 @@ const PublicChat = () => {
 
       // Determine the room ID based on current chat mode
       let roomToJoin;
-      let fetchHistoryData = { userId: user?.userid };
+      let fetchHistoryData = { user_id: user?.user_id };
 
       if (chatMode === "public") {
         roomToJoin = PUBLIC_CHAT_ROOM_ID;
         fetchHistoryData.roomId = PUBLIC_CHAT_ROOM_ID;
       } else if (chatMode === "private" && currentDmRecipient) {
         roomToJoin = getPrivateChatRoomId(
-          user?.userid,
-          currentDmRecipient.userId
+          user?.user_id,
+          currentDmRecipient.user_id
         );
         fetchHistoryData.roomId = roomToJoin;
-        fetchHistoryData.targetUserId = currentDmRecipient.userId; // Pass targetUserId for private history
+        fetchHistoryData.targetuser_id = currentDmRecipient.user_id; // Pass targetuser_id for private history
       } else {
         // Fallback or initial state if no recipient for private chat is set
         roomToJoin = PUBLIC_CHAT_ROOM_ID;
@@ -111,9 +111,9 @@ const PublicChat = () => {
       newSocket.emit("fetch_chat_history", fetchHistoryData);
 
       // Notify server about user being online if logged in
-      if (user?.userid && user?.username) {
+      if (user?.user_id && user?.username) {
         newSocket.emit("user_online", {
-          userId: user.userid,
+          user_id: user.user_id,
           username: user.username,
           avatar_url: user.avatar_url,
         });
@@ -134,7 +134,7 @@ const PublicChat = () => {
         chatMode === "public"
           ? PUBLIC_CHAT_ROOM_ID
           : currentDmRecipient
-          ? getPrivateChatRoomId(user?.userid, currentDmRecipient.userId)
+          ? getPrivateChatRoomId(user?.user_id, currentDmRecipient.user_id)
           : null;
 
       // Only add message if it belongs to the currently active chat mode/recipient
@@ -181,11 +181,11 @@ const PublicChat = () => {
         chatMode === "public"
           ? PUBLIC_CHAT_ROOM_ID
           : currentDmRecipient
-          ? getPrivateChatRoomId(user?.userid, currentDmRecipient.userId)
+          ? getPrivateChatRoomId(user?.user_id, currentDmRecipient.user_id)
           : null;
 
       if (
-        data.userId !== user?.userid &&
+        data.user_id !== user?.user_id &&
         typingRoomId === currentActiveRoomId
       ) {
         setIsTyping(true);
@@ -203,11 +203,11 @@ const PublicChat = () => {
         chatMode === "public"
           ? PUBLIC_CHAT_ROOM_ID
           : currentDmRecipient
-          ? getPrivateChatRoomId(user?.userid, currentDmRecipient.userId)
+          ? getPrivateChatRoomId(user?.user_id, currentDmRecipient.user_id)
           : null;
 
       if (
-        data.userId !== user?.userid &&
+        data.user_id !== user?.user_id &&
         typingRoomId === currentActiveRoomId
       ) {
         clearTimeout(typingTimeoutRef.current);
@@ -219,8 +219,8 @@ const PublicChat = () => {
     newSocket.on("disconnect", () => {
       console.log("Disconnected from Socket.IO server.");
       setSocket(null);
-      if (user?.userid) {
-        newSocket.emit("user_offline", { userId: user.userid });
+      if (user?.user_id) {
+        newSocket.emit("user_offline", { user_id: user.user_id });
       }
     });
 
@@ -248,7 +248,7 @@ const PublicChat = () => {
   // Effect hook to fetch all registered users
   useEffect(() => {
     const fetchRegisteredUsers = async () => {
-      if (!user?.userid) {
+      if (!user?.user_id) {
         // Only fetch if user is logged in
         setRegisteredUsers([]);
         return;
@@ -270,7 +270,7 @@ const PublicChat = () => {
         const users = await response.json();
         // The backend returns { users: [...] } so access the 'users' array
         setRegisteredUsers(
-          users.users.filter((u) => u.userid !== user?.userid)
+          users.users.filter((u) => u.user_id !== user?.user_id)
         );
       } catch (error) {
         console.error("Failed to fetch registered users:", error);
@@ -284,7 +284,7 @@ const PublicChat = () => {
     };
 
     fetchRegisteredUsers();
-  }, [user?.userid]); // Re-fetch if the logged-in user changes
+  }, [user?.user_id]); // Re-fetch if the logged-in user changes
 
   // Effect hook to scroll to the bottom of the messages container
   useEffect(() => {
@@ -358,48 +358,48 @@ const PublicChat = () => {
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    if (socket && user?.userid) {
+    if (socket && user?.user_id) {
       const roomToSend =
         chatMode === "public"
           ? PUBLIC_CHAT_ROOM_ID
           : currentDmRecipient
-          ? getPrivateChatRoomId(user.userid, currentDmRecipient.userId)
+          ? getPrivateChatRoomId(user.user_id, currentDmRecipient.user_id)
           : null;
 
       if (roomToSend) {
         if (e.target.value.trim().length > 0) {
           socket.emit("typing", {
-            userId: user.userid,
+            user_id: user.user_id,
             username: user.username,
             roomId: roomToSend,
             message_type: chatMode,
-            recipient_id: currentDmRecipient?.userId || null,
+            recipient_id: currentDmRecipient?.user_id || null,
           });
         } else {
           socket.emit("stop_typing", {
-            userId: user.userid,
+            user_id: user.user_id,
             roomId: roomToSend,
             message_type: chatMode,
-            recipient_id: currentDmRecipient?.userId || null,
+            recipient_id: currentDmRecipient?.user_id || null,
           });
         }
       }
     }
     clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      if (socket && user?.userid) {
+      if (socket && user?.user_id) {
         const roomToSend =
           chatMode === "public"
             ? PUBLIC_CHAT_ROOM_ID
             : currentDmRecipient
-            ? getPrivateChatRoomId(user.userid, currentDmRecipient.userId)
+            ? getPrivateChatRoomId(user.user_id, currentDmRecipient.user_id)
             : null;
         if (roomToSend) {
           socket.emit("stop_typing", {
-            userId: user.userid,
+            user_id: user.user_id,
             roomId: roomToSend,
             message_type: chatMode,
-            recipient_id: currentDmRecipient?.userId || null,
+            recipient_id: currentDmRecipient?.user_id || null,
           });
         }
       }
@@ -415,16 +415,16 @@ const PublicChat = () => {
       return;
     }
 
-    if ((messageText || selectedFile) && socket && user?.userid) {
+    if ((messageText || selectedFile) && socket && user?.user_id) {
       let roomToSend;
       let recipientIdToSend = null;
 
       if (chatMode === "private" && currentDmRecipient) {
         roomToSend = getPrivateChatRoomId(
-          user.userid,
-          currentDmRecipient.userId
+          user.user_id,
+          currentDmRecipient.user_id
         );
-        recipientIdToSend = currentDmRecipient.userId;
+        recipientIdToSend = currentDmRecipient.user_id;
       } else {
         roomToSend = PUBLIC_CHAT_ROOM_ID;
       }
@@ -432,7 +432,7 @@ const PublicChat = () => {
       const messagePayload = {
         roomId: roomToSend,
         text: messageText,
-        userId: user.userid,
+        user_id: user.user_id,
         username: user.username,
         avatar_url: user.avatar_url,
         message_type: chatMode,
@@ -451,15 +451,15 @@ const PublicChat = () => {
       setShowInputEmojiPicker(false); // Make sure this is reset
       clearTimeout(typingTimeoutRef.current);
 
-      if (socket && user?.userid) {
+      if (socket && user?.user_id) {
         socket.emit("stop_typing", {
-          userId: user.userid,
+          user_id: user.user_id,
           roomId: roomToSend,
           message_type: chatMode,
           recipient_id: recipientIdToSend,
         });
       }
-    } else if (!user?.userid) {
+    } else if (!user?.user_id) {
       Swal.fire({
         icon: "warning",
         title: "Login Required",
@@ -474,7 +474,7 @@ const PublicChat = () => {
   };
 
   const handleReaction = (messageId, emoji) => {
-    if (!user?.userid) {
+    if (!user?.user_id) {
       Swal.fire({
         icon: "warning",
         title: "Login Required",
@@ -493,7 +493,7 @@ const PublicChat = () => {
 
     socket.emit("react_message", {
       messageId,
-      userId: user.userid,
+      user_id: user.user_id,
       username: user.username,
       emoji: emoji,
     });
@@ -609,14 +609,14 @@ const PublicChat = () => {
       editingMessageId &&
       editingMessageText.trim() &&
       socket &&
-      user?.userid
+      user?.user_id
     ) {
       // Pass file_data, file_name, file_type as null if not sending a new file with edit
       // (current implementation only allows text editing)
       socket.emit("edit_message", {
         messageId: editingMessageId,
         newText: editingMessageText.trim(),
-        userId: user.userid,
+        user_id: user.user_id,
         file_data: null, // No file change allowed during text edit
         file_name: null,
         file_type: null,
@@ -643,7 +643,7 @@ const PublicChat = () => {
 
   // Function to delete a message
   const handleDeleteMessage = async (messageId) => {
-    if (!user?.userid) {
+    if (!user?.user_id) {
       Swal.fire({
         icon: "warning",
         title: "Login Required",
@@ -673,14 +673,14 @@ const PublicChat = () => {
     if (result.isConfirmed) {
       socket.emit("delete_message", {
         messageId,
-        userId: user.userid,
+        user_id: user.user_id,
       });
     }
   };
 
   // Function to switch chat mode (Public/Private)
   const switchChatMode = (mode, recipient = null) => {
-    if (!user?.userid && mode === "private") {
+    if (!user?.user_id && mode === "private") {
       Swal.fire({
         icon: "warning",
         title: "Login Required",
@@ -728,7 +728,7 @@ const PublicChat = () => {
               chatMode === "private" ? styles.activeMode : ""
             }`}
             onClick={() => setShowRegisteredUsersModal(true)} // Open modal to select DM recipient
-            disabled={!user?.userid}
+            disabled={!user?.user_id}
             title="Start a Private Chat"
           >
             <FiMessageCircle className={styles.chatModeIcon} /> Private
@@ -753,10 +753,10 @@ const PublicChat = () => {
         <strong>Online: </strong>
         {onlineUsers.length > 0 ? (
           onlineUsers.map((u) => (
-            <span key={u.userId} className={styles.onlineUserTag}>
+            <span key={u.user_id} className={styles.onlineUserTag}>
               <span className={styles.onlineIndicator}></span>
               {u.username}
-              {u.userId !== user?.userid && ( // Don't allow DMing self
+              {u.user_id !== user?.user_id && ( // Don't allow DMing self
                 <button
                   className={styles.dmButton}
                   onClick={() => switchChatMode("private", u)}
@@ -793,7 +793,7 @@ const PublicChat = () => {
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isMyMessage = msg.user_id === user?.userid;
+            const isMyMessage = msg.user_id === user?.user_id;
             const isFileMessage = msg.file_data && msg.file_name;
             const isImage =
               isFileMessage &&
@@ -891,7 +891,7 @@ const PublicChat = () => {
                             <span
                               key={reaction.emoji}
                               className={`${styles.reactionBubble} ${
-                                reaction.userIds.includes(user?.userid)
+                                reaction.user_ids.includes(user?.user_id)
                                   ? styles.userReacted
                                   : ""
                               }`}
@@ -906,7 +906,7 @@ const PublicChat = () => {
                                 {reaction.emoji}
                               </span>
                               <span className={styles.count}>
-                                {reaction.userIds.length}
+                                {reaction.user_ids.length}
                               </span>
                             </span>
                           ))}
@@ -1055,7 +1055,7 @@ const PublicChat = () => {
               ) : (
                 <ul className={styles.userList}>
                   {registeredUsers.map((u) => (
-                    <li key={u.userid} className={styles.userListItem}>
+                    <li key={u.user_id} className={styles.userListItem}>
                       <div className={styles.userInfo}>
                         {u.avatar_url ? (
                           <img
@@ -1070,7 +1070,7 @@ const PublicChat = () => {
                         )}
                         <span>{u.username}</span>
                         {onlineUsers.some(
-                          (onlineUser) => onlineUser.userId === u.userid
+                          (onlineUser) => onlineUser.user_id === u.user_id
                         ) && (
                           <span className={styles.onlineIndicatorSmall}></span>
                         )}
@@ -1079,7 +1079,7 @@ const PublicChat = () => {
                         className={styles.selectUserButton}
                         onClick={() => {
                           switchChatMode("private", {
-                            userId: u.userid,
+                            user_id: u.user_id,
                             username: u.username,
                             avatar_url: u.avatar_url,
                           });
@@ -1234,7 +1234,7 @@ const PublicChat = () => {
             disabled={
               (!input.trim() && !selectedFile && !editingMessageId) ||
               !socket ||
-              !user?.userid
+              !user?.user_id
             } // Disable if no text/file AND not editing, or not connected, or not logged in
             aria-label={
               editingMessageId ? "Save edited message" : "Send message"

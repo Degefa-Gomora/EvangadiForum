@@ -16,7 +16,7 @@ import { FaCheckCircle } from "react-icons/fa";
 function QuestionAndAnswer() {
   const [questionDetails, setQuestionDetails] = useState({});
   const { user } = useContext(UserState);
-  const userId = user?.userid; // Ensure userId is correctly derived from context
+  const user_id = user?.user_id; // Ensure user_id is correctly derived from context
   const { questionId } = useParams();
   const [loading, setLoading] = useState(true); // Initial state for loading
   const [expandedAnswer, setExpandedAnswer] = useState(null); // State to track expanded answers
@@ -77,7 +77,7 @@ function QuestionAndAnswer() {
       const response = await axiosInstance.post(
         "/answer", // This route expects /api/v1/answer
         {
-          userid: userId, // Ensure userId is available from context/auth
+          user_id: user_id, // Ensure user_id is available from context/auth
           answer: answerInput.current.value,
           questionid: questionId,
         },
@@ -285,18 +285,18 @@ function QuestionAndAnswer() {
   }
 
   // Check if the current user is the owner of the question
-  const isQuestionOwner = userId === questionDetails?.qtn_userid;
+  const isQuestionOwner = user_id === questionDetails?.qtn_user_id;
   const solutionAnswerId = questionDetails?.solution_answer_id; // Assuming backend returns this
   // In QuestionAndAnswer.jsx, before the 'return' statement
-  console.log("Logged in User ID:", userId);
-  console.log("Question Owner ID from backend:", questionDetails?.qtn_userid);
+  console.log("Logged in User ID:", user_id);
+  console.log("Question Owner ID from backend:", questionDetails?.qtn_user_id);
   console.log(
     "Solution Answer ID from backend:",
     questionDetails?.solution_answer_id
   );
   console.log(
     "Is current user the question owner?",
-    userId === questionDetails?.qtn_userid
+    user_id === questionDetails?.qtn_user_id
   );
   console.log(
     "Is a solution already marked?",

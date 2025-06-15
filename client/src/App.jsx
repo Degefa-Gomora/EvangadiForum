@@ -43,7 +43,7 @@ function App() {
 
       const response = await axiosInstance.get("/user/check");
       // --- IMPORTANT FIX START ---
-      // The API returns { user: { username, userid } }.
+      // The API returns { user: { username, user_id } }.
       // We need to extract the inner 'user' object.
       const userData = response.data.user;
       // --- IMPORTANT FIX END ---

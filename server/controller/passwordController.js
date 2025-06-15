@@ -15,7 +15,7 @@ exports.forgotPassword = async (req, res) => {
 
   try {
     const [users] = await db.query(
-      "SELECT userid, email FROM users WHERE email = ?",
+      "SELECT user_id, email FROM users WHERE email = ?",
       [email]
     );
 
@@ -28,8 +28,8 @@ exports.forgotPassword = async (req, res) => {
 
     // Save reset token and expiration in DB (you'll need to add these columns in your users table)
     await db.query(
-      "UPDATE users SET reset_password_token = ?, reset_password_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE userid = ?",
-      [resetToken, user.userid]
+      "UPDATE users SET reset_password_token = ?, reset_password_expires = DATE_ADD(NOW(), INTERVAL 1 HOUR) WHERE user_id = ?",
+      [resetToken, user.user_id]
     );
 
     // TODO: Send reset email with link including token (for now just respond with token)
@@ -57,7 +57,7 @@ exports.resetPassword = async (req, res) => {
 
     // Check if token matches the one in DB and is not expired
     const [users] = await db.query(
-      "SELECT userid, reset_password_token, reset_password_expires FROM users WHERE email = ?",
+      "SELECT user_id, reset_password_token, reset_password_expires FROM users WHERE email = ?",
       [email]
     );
 
@@ -80,8 +80,8 @@ exports.resetPassword = async (req, res) => {
 
     // Update password, clear reset token & expiration
     await db.query(
-      "UPDATE users SET password = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE userid = ?",
-      [hashedPassword, user.userid]
+      "UPDATE users SET password = ?, reset_password_token = NULL, reset_password_expires = NULL WHERE user_id = ?",
+      [hashedPassword, user.user_id]
     );
 
     res.json({ msg: "Password has been reset successfully" });

@@ -8,14 +8,14 @@ async function getAnswer(req, res) {
     const [rows] = await dbConnection.query(
       `SELECT
     a.answerid,
-    a.userid AS answer_userid,
+    a.user_id AS answer_user_id,
     a.answer,
     a.created_at AS createdAt,
     a.rating_count,
     u.username
 FROM
     answers a
-INNER JOIN users u ON a.userid = u.userid
+INNER JOIN users u ON a.user_id = u.user_id
 WHERE
     a.questionid = ?
 ORDER BY a.created_at DESC`, // Order by creation date to show latest first
@@ -32,7 +32,7 @@ ORDER BY a.created_at DESC`, // Order by creation date to show latest first
 
 // Post Answers for a Question
 async function postAnswer(req, res) {
-  const { userid, answer, questionid } = req.body;
+  const { user_id, answer, questionid } = req.body;
 
   // Create a new date object and adjust to UTC+3 hours
   const currentTimestamp = new Date();
@@ -44,7 +44,7 @@ async function postAnswer(req, res) {
     .slice(0, 19)
     .replace("T", " ");
 
-  if (!userid || !answer || !questionid) {
+  if (!user_id || !answer || !questionid) {
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json({ message: "All fields are required" });
@@ -53,8 +53,8 @@ async function postAnswer(req, res) {
   try {
     // When inserting, also set rating_count to 0 initially
     await dbConnection.query(
-      "INSERT INTO answers (userid, answer, questionid, createdAt, rating_count) VALUES (?, ?, ?, ?, ?)",
-      [userid, answer, questionid, formattedTimestamp, 0] // Initialize rating_count to 0
+      "INSERT INTO answers (user_id, answer, questionid, createdAt, rating_count) VALUES (?, ?, ?, ?, ?)",
+      [user_id, answer, questionid, formattedTimestamp, 0] // Initialize rating_count to 0
     );
     return res
       .status(StatusCodes.CREATED)
@@ -71,9 +71,9 @@ async function postAnswer(req, res) {
 async function rateAnswer(req, res) {
   const { answerId, ratingType } = req.body;
   // Assuming authMiddleware attaches user info to req.user
-  const { userid } = req.user; // Ensure this is `userid` from auth middleware
+  const { user_id } = req.user; // Ensure this is `user_id` from auth middleware
 
-  if (!answerId || !ratingType || !userid) {
+  if (!answerId || !ratingType || !user_id) {
     return res
       .status(StatusCodes.BAD_REQUEST)
       .json({ msg: "Missing required rating information." });
@@ -94,10 +94,10 @@ async function rateAnswer(req, res) {
     let currentRatingChange = 0; // The change to apply to answer.rating_count
 
     // 1. Check if the user has already rated this answer
-    // Corrected column names: `ratingid`, `answerid`, `userid`, `vote_type`
+    // Corrected column names: `ratingid`, `answerid`, `user_id`, `vote_type`
     const [existingRating] = await connection.query(
-      "SELECT ratingid, vote_type FROM answer_ratings WHERE answerid = ? AND userid = ?",
-      [answerId, userid]
+      "SELECT ratingid, vote_type FROM answer_ratings WHERE answerid = ? AND user_id = ?",
+      [answerId, user_id]
     );
 
     if (existingRating.length > 0) {
@@ -122,10 +122,10 @@ async function rateAnswer(req, res) {
       }
     } else {
       // User is rating for the first time
-      // Corrected column names: `answerid`, `userid`, `vote_type`
+      // Corrected column names: `answerid`, `user_id`, `vote_type`
       await connection.query(
-        "INSERT INTO answer_ratings (answerid, userid, vote_type) VALUES (?, ?, ?)",
-        [answerId, userid, newRatingValue] // Store the numeric value (1 or -1)
+        "INSERT INTO answer_ratings (answerid, user_id, vote_type) VALUES (?, ?, ?)",
+        [answerId, user_id, newRatingValue] // Store the numeric value (1 or -1)
       );
       currentRatingChange = newRatingValue; // Add the new vote's value
     }

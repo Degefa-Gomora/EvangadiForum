@@ -34,7 +34,7 @@ function AppRouter() {
         <Route path="/ask" element={<AskQuestion />} />
         <Route path="/question/:questionId" element={<QuestionAndAnswer />} />
         <Route path="/chatbot" element={<Chatbot />} />
-        <Route path="/profile/:userid" element={<UserProfile />} />
+        <Route path="/profile/:user_id" element={<UserProfile />} />
         {/* Add any other routes that should only be accessible when logged in here */}
       </Route>
     </Routes>

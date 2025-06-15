@@ -5,7 +5,7 @@ import { UserState } from "../../App.jsx";
 const PrivateRoute = ({ children }) => {
   const { user } = useContext(UserState);
 
-  if (!user?.userid) {
+  if (!user?.user_id) {
     return <Navigate to="/auth" replace />; //replace prevents the redirect from being added to the browser history (so hitting back won’t take them back to the private route).
   }
 
